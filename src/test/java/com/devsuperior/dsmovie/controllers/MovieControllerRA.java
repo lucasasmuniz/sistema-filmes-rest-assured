@@ -20,6 +20,8 @@ public class MovieControllerRA {
 	public void setUp() {
 		baseURI = "http://localhost:8080"; 
 		movieTitle = "harry";
+		existingId = 1L;
+		nonExistingId = 300L;
 	}
 	
 	@Test
@@ -58,11 +60,26 @@ public class MovieControllerRA {
 	}
 	
 	@Test
-	public void findByIdShouldReturnMovieWhenIdExists() {		
+	public void findByIdShouldReturnMovieWhenIdExists() {	
+		given()
+			.accept(ContentType.JSON)
+		.when()
+			.get("/movies/{id}", existingId)
+		.then()
+			.statusCode(200)
+			.body("id", is(1))
+			.body("title", equalTo("The Witcher"))
+			.body("score", is(4.5F))
+			.body("count", is(2))
+			.body("image", equalTo("https://www.themoviedb.org/t/p/w533_and_h300_bestv2/jBJWaqoSCiARWtfV0GlqHrcdidd.jpg"));
 	}
 	
 	@Test
-	public void findByIdShouldReturnNotFoundWhenIdDoesNotExist() {	
+	public void findByIdShouldReturnNotFoundWhenIdDoesNotExist() {
+		given()
+			.get("/movies/{id}", nonExistingId)
+		.then()
+			.statusCode(404);
 	}
 	
 	@Test
