@@ -1,27 +1,48 @@
 package com.devsuperior.dsmovie.controllers;
 
-import static io.restassured.RestAssured.*;
-import static io.restassured.matcher.RestAssuredMatchers.*;
-import static org.hamcrest.Matchers.*;
+import static io.restassured.RestAssured.baseURI;
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.is;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.json.JSONException;
+import org.json.simple.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.devsuperior.dsmovie.tests.TokenUtil;
 
 import io.restassured.http.ContentType;
 
 public class MovieControllerRA {
 	
-	private String adminToken, clientToken;
+	private String adminToken, clientToken, invalidToken;
 	private String movieTitle;
 	private Long existingId, nonExistingId;
+	private Map<String, Object> movie;
 
 	@BeforeEach
-	public void setUp() {
+	public void setUp() throws JSONException {
 		baseURI = "http://localhost:8080"; 
+		
 		movieTitle = "harry";
 		existingId = 1L;
 		nonExistingId = 300L;
+		adminToken = TokenUtil.obtainAccessToken("maria@gmail.com", "123456");
+		clientToken = TokenUtil.obtainAccessToken("alex@gmail.com", "123456");
+		invalidToken = clientToken + "123333";
+		
+		
+		movie = new HashMap<>();
+		movie.put("title", "Test Movie");
+		movie.put("score", 0F);
+		movie.put("count", 0);
+		movie.put("image", "https://www.themoviedb.org/t/p/w533_and_h300_bestv2/jBJWaqoSCiARWtfV0GlqHrcdidd.jpg");
 	}
 	
 	@Test
@@ -83,14 +104,50 @@ public class MovieControllerRA {
 	}
 	
 	@Test
-	public void insertShouldReturnUnprocessableEntityWhenAdminLoggedAndBlankTitle() throws JSONException {		
+	public void insertShouldReturnUnprocessableEntityWhenAdminLoggedAndBlankTitle() throws JSONException {	
+		movie.put("title", "");
+		JSONObject jsonObject = new JSONObject(movie);
+		
+		given()
+			.header("Authorization", "bearer " + adminToken)
+			.contentType(ContentType.JSON)
+			.body(jsonObject)
+			.accept(ContentType.JSON)
+		.when()
+			.post("/movies")
+		.then()
+			.statusCode(422)
+			.body("errors.fieldName", hasItem("title"))
+			.body("errors.message", hasItem("Campo requerido"));
 	}
 	
 	@Test
 	public void insertShouldReturnForbiddenWhenClientLogged() throws Exception {
+		JSONObject jsonObject = new JSONObject(movie);
+		
+		given()
+			.header("Authorization", "bearer " + clientToken)
+			.contentType(ContentType.JSON)
+			.body(jsonObject)
+			.accept(ContentType.JSON)
+		.when()
+			.post("/movies")
+		.then()
+			.statusCode(403);
 	}
 	
 	@Test
 	public void insertShouldReturnUnauthorizedWhenInvalidToken() throws Exception {
+		JSONObject jsonObject = new JSONObject(movie);
+		
+		given()
+			.header("Authorization", "bearer " + invalidToken)
+			.contentType(ContentType.JSON)
+			.body(jsonObject)
+			.accept(ContentType.JSON)
+		.when()
+			.post("/movies")
+		.then()
+			.statusCode(401);
 	}
 }
